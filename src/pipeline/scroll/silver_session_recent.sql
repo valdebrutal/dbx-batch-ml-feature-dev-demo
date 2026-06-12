@@ -1,7 +1,6 @@
--- Windowed feature table: silver_session over the trailing 30 days ending at
--- ${partition_date} (a required bundle variable = the run date / upper bound).
--- Fixed-literal bounds (not current_date()) keep the filter incrementally refreshable;
--- the window moves by providing a new partition_date at deploy.
+-- Windowed feature table: silver_session over the last 30 days (rolling).
+-- Uses current_date() in the WHERE filter so the window auto-advances each day
+-- Per the incremental-refresh docs, current_date() is allowed in a WHERE clause.
 
 CREATE OR REFRESH MATERIALIZED VIEW silver_session_recent (
   account_id BIGINT NOT NULL,
@@ -13,7 +12,7 @@ CREATE OR REFRESH MATERIALIZED VIEW silver_session_recent (
   CONSTRAINT silver_session_recent_pk PRIMARY KEY (account_id, observation_date TIMESERIES)
 )
 CLUSTER BY (observation_date)
-COMMENT "silver_session from ${window_start_date} onward; rolling window via a fixed date parameter (incrementally refreshable)."
+COMMENT "silver_session over the last 30 days; rolling window via current_date()."
 AS
 SELECT
   account_id,
@@ -23,4 +22,4 @@ SELECT
   sessions_ios_7d,
   sessions_android_7d
 FROM silver_session
-WHERE observation_date BETWEEN DATE '${partition_date}' - INTERVAL 30 DAY AND DATE '${partition_date}';
+WHERE observation_date >= current_date() - INTERVAL 29 DAY;

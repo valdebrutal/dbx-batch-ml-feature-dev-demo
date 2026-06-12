@@ -66,7 +66,7 @@ The materialized views refresh **incrementally** on serverless: when new data ar
 2. Re-run `sc_fs_demo_pipeline`.
 3. In the pipeline UI, the **Tables** tab shows each MV's refresh type (`Incremental` / `No change` / `Full recompute`). MVs whose inputs didn't change are skipped; only the affected ones recompute.
 
-`scroll/silver_session_recent.sql` shows a windowed feature table — the trailing 30 days ending at a deterministic run-date parameter (`partition_date`, set at deploy) rather than `current_date()` — so new days append incrementally. The window moves by providing a new `partition_date`.
+`scroll/silver_session_recent.sql` shows a rolling last-30-days window using `current_date()` in the filter, so it auto-advances daily with no parameter or redeploy — and it still refreshes incrementally (verified ROW_BASED, not a full recompute).
 
 ## Source tables (`src_*`)
 
@@ -92,22 +92,22 @@ Six append-only event streams keyed on `account_id` + an event timestamp (with a
 | Forward range-window label | `pipeline/common/labels_did_login_within_7d.sql` |
 | JSON struct parsing | `pipeline/scroll/silver_session.sql` (`from_json`) |
 | Snapshot / dim joins | `pipeline/common/silver_account.sql`, `pipeline/scroll/silver_social_enriched.sql` |
-| Windowed feature table with a parameterized cutoff (incremental append) | `pipeline/scroll/silver_session_recent.sql` |
+| Rolling last-30-days window via `current_date()` (incrementally refreshable) | `pipeline/scroll/silver_session_recent.sql` |
 | Feature subset selection (per-model) | `jobs/build_training_set.py`, `build_prediction_set.py` |
 | Data-quality expectations | most feature MVs (`CONSTRAINT ... EXPECT (...)`) |
 
 ## Deploy + run
 
-Set your CLI profile in `databricks.yml` (`targets.dev.workspace.profile`) and your `catalog`/`schema` via the bundle variables. `partition_date` (the run date) is **required** and has no default — pass it on every command:
+Set your CLI profile in `databricks.yml` (`targets.dev.workspace.profile`) and your `catalog`/`schema` via the bundle variables.
 
 ```bash
-databricks bundle validate --var partition_date=$(date +%F)
-databricks bundle deploy   --var partition_date=$(date +%F)
-databricks bundle run sc_fs_demo_seed_initial_data --var partition_date=$(date +%F)   # once, to seed data
-databricks bundle run sc_fs_demo_orchestrator      --var partition_date=$(date +%F)   # the full DAG
+databricks bundle validate
+databricks bundle deploy
+databricks bundle run sc_fs_demo_seed_initial_data   # once, to seed data
+databricks bundle run sc_fs_demo_orchestrator        # the full DAG
 ```
 
-Override catalog/schema the same way: `--var catalog=my_catalog --var schema=my_schema`.
+Override catalog/schema without editing files: `--var catalog=my_catalog --var schema=my_schema`.
 
 ## Outputs to inspect after a run
 
