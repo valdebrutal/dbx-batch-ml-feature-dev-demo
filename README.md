@@ -112,7 +112,7 @@ To target a different catalog/schema without editing files: `databricks bundle d
 ## Outputs to inspect after a run
 
 - `<catalog>.<schema>.src_*` — 8 source tables
-- `silver_*` / `dim_spender_tier` — feature-table MVs + intermediates
+- `silver_*` — feature-table MVs (pure intermediates like the date spine, spender tier, and purchase velocity are pipeline-private and not published to the catalog)
 - `labels_did_login_within_7d` — label MV (also the training eligibility set)
 - `eligibility_prediction` — prediction eligibility set (active accounts at the latest observation_date)
 - `scroll_raw_training` — training dataset (eligibility set + PIT-joined features + label)

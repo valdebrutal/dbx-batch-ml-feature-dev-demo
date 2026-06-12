@@ -1,7 +1,7 @@
 -- Utility MV: one row per observation_date over the seeded history.
 -- `${max_history_days}` comes from the pipeline `configuration:` block.
 
-CREATE OR REFRESH MATERIALIZED VIEW date_spine
+CREATE OR REFRESH PRIVATE MATERIALIZED VIEW date_spine
 COMMENT "One row per observation_date over the last ${max_history_days} days."
 AS
 WITH bounds AS (

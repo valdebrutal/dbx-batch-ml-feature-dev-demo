@@ -2,7 +2,7 @@
 -- fully observable. Used by labels_did_login_within_7d so the cutoff isn't an
 -- inline scalar subquery (which would break incremental refresh).
 
-CREATE OR REFRESH MATERIALIZED VIEW date_spine_observable
+CREATE OR REFRESH PRIVATE MATERIALIZED VIEW date_spine_observable
 COMMENT "obs_dates from date_spine restricted to the labels-observable range."
 AS
 SELECT d.observation_date

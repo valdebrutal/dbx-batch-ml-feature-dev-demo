@@ -1,7 +1,7 @@
 -- Intermediate MV from silver_purchase: per-(account, day) velocity ratio
 -- (7d sum / 30d sum). Not a feature; consumed by silver_purchase_enriched.
 
-CREATE OR REFRESH MATERIALIZED VIEW silver_purchase_velocity (
+CREATE OR REFRESH PRIVATE MATERIALIZED VIEW silver_purchase_velocity (
   account_id BIGINT NOT NULL,
   observation_date DATE NOT NULL,
   spend_7d_total DOUBLE,

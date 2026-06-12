@@ -1,7 +1,7 @@
 -- Dimension MV from silver_purchase: spender tier per (account, observation_date)
 -- from 30-day purchase amount. Consumed by silver_purchase_enriched.
 
-CREATE OR REFRESH MATERIALIZED VIEW dim_spender_tier (
+CREATE OR REFRESH PRIVATE MATERIALIZED VIEW dim_spender_tier (
   account_id BIGINT NOT NULL,
   observation_date DATE NOT NULL,
   spender_tier STRING,
