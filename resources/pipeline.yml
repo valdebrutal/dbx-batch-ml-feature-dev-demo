@@ -6,7 +6,7 @@ resources:
       catalog: ${var.catalog}
       schema: ${var.schema}
       channel: PREVIEW
-      development: true
+      # development mode is set by the bundle target (mode: development), not hardcoded.
       # Source layout mirrors Hilbert's SQL taxonomy: common/ holds cross-pipeline
       # shared MVs (reusable across scroll / magic / soil); scroll/ holds this
       # pipeline's MVs. One recursive glob picks up both subfolders (separate globs

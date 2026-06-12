@@ -10,6 +10,7 @@ CREATE OR REFRESH MATERIALIZED VIEW silver_account (
   CONSTRAINT nonneg_account_age EXPECT (account_age_days IS NULL OR account_age_days >= 0),
   CONSTRAINT silver_account_pk PRIMARY KEY (account_id, observation_date TIMESERIES)
 )
+CLUSTER BY (observation_date)
 COMMENT "Account-level snapshot features per (account_id, observation_date)."
 AS
 SELECT
