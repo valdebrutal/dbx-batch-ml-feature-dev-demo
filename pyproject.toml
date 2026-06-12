@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sc-fs-demo"
+version = "0.1.0"
+description = "Spark Declarative Pipelines + Declarative Feature Store demo."
+requires-python = ">=3.11"
+dependencies = [
+  "databricks-feature-engineering>=0.13.0",
+  "databricks-sdk>=0.40.0",
+]
+
+# The wheel ships the importable library only: the `features` package and the
+# `logging_config` module. The entry-point scripts under src/jobs/ run as
+# spark_python_task python_files and import this wheel from the serverless environment.
+[tool.setuptools]
+package-dir = { "" = "src" }
+packages = ["features"]
+py-modules = ["logging_config"]

@@ -1,0 +1,26 @@
+resources:
+  jobs:
+    sc_fs_demo_restate_three_dates:
+      name: sc_fs_demo_restate_three_dates
+      max_concurrent_runs: 1
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+      tasks:
+        - task_key: restate_three_dates
+          environment_key: default
+          spark_python_task:
+            python_file: ../src/jobs/restate_three_dates.py
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+      environments:
+        - environment_key: default
+          spec:
+            client: "5"
+            dependencies:
+              - ../dist/*.whl

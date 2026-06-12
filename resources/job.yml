@@ -1,0 +1,55 @@
+resources:
+  jobs:
+    sc_fs_demo_orchestrator:
+      name: sc_fs_demo_orchestrator
+      max_concurrent_runs: 1
+
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+        - name: history_days
+          default: ${var.history_days}
+        - name: num_accounts
+          default: ${var.num_accounts}
+
+      tasks:
+        - task_key: input_data
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.sc_fs_demo_pipeline.id}
+
+        # No separate "register features" task: the TIMESERIES PK on each MV already
+        # makes it a feature table that create_training_set joins point-in-time directly.
+
+        - task_key: build_training_set
+          depends_on:
+            - task_key: input_data
+          environment_key: default
+          spark_python_task:
+            python_file: ../src/jobs/build_training_set.py
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+
+        - task_key: build_prediction_set
+          depends_on:
+            - task_key: input_data
+          environment_key: default
+          spark_python_task:
+            python_file: ../src/jobs/build_prediction_set.py
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+
+      environments:
+        - environment_key: default
+          spec:
+            client: "5"
+            dependencies:
+              # The wheel pulls databricks-feature-engineering via its own deps.
+              - ../dist/*.whl

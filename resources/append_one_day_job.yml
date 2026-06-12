@@ -1,0 +1,26 @@
+resources:
+  jobs:
+    sc_fs_demo_append_one_day:
+      name: sc_fs_demo_append_one_day
+      max_concurrent_runs: 1
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+      tasks:
+        - task_key: append_one_day
+          environment_key: default
+          spark_python_task:
+            python_file: ../src/jobs/append_one_day.py
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+      environments:
+        - environment_key: default
+          spec:
+            client: "5"
+            dependencies:
+              - ../dist/*.whl

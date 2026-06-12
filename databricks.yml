@@ -1,0 +1,34 @@
+bundle:
+  name: sc_fs_demo
+
+include:
+  - resources/*.yml
+
+# Build the project wheel (the `features` package + `logging_config` module). Job tasks
+# attach it via their serverless environment dependencies.
+artifacts:
+  sc_fs_demo_wheel:
+    type: whl
+    build: uv build --wheel
+    path: .
+
+variables:
+  catalog:
+    description: Unity Catalog to use.
+    default: main
+  schema:
+    description: Schema under the catalog where all demo objects live.
+    default: sc_fs_demo
+  history_days:
+    description: Days of synthetic history to seed.
+    default: 540
+  num_accounts:
+    description: Number of synthetic player accounts to generate.
+    default: 5000
+
+targets:
+  dev:
+    default: true
+    mode: development
+    workspace:
+      profile: DEFAULT   # set to your Databricks CLI profile

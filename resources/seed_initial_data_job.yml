@@ -1,0 +1,34 @@
+resources:
+  jobs:
+    sc_fs_demo_seed_initial_data:
+      name: sc_fs_demo_seed_initial_data
+      max_concurrent_runs: 1
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+        - name: history_days
+          default: ${var.history_days}
+        - name: num_accounts
+          default: ${var.num_accounts}
+      tasks:
+        - task_key: seed_synthetic_data
+          environment_key: default
+          spark_python_task:
+            python_file: ../src/jobs/generate_scroll_data.py
+            parameters:
+              - "--catalog"
+              - "{{job.parameters.catalog}}"
+              - "--schema"
+              - "{{job.parameters.schema}}"
+              - "--history-days"
+              - "{{job.parameters.history_days}}"
+              - "--num-accounts"
+              - "{{job.parameters.num_accounts}}"
+      environments:
+        - environment_key: default
+          spec:
+            client: "5"
+            dependencies:
+              - ../dist/*.whl

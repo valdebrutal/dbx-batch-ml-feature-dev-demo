@@ -1,0 +1,25 @@
+resources:
+  pipelines:
+    sc_fs_demo_pipeline:
+      name: sc_fs_demo_pipeline
+      serverless: true
+      catalog: ${var.catalog}
+      schema: ${var.schema}
+      channel: PREVIEW
+      development: true
+      # Source layout mirrors Hilbert's SQL taxonomy: common/ holds cross-pipeline
+      # shared MVs (reusable across scroll / magic / soil); scroll/ holds this
+      # pipeline's MVs. One recursive glob picks up both subfolders (separate globs
+      # would cause cosmetic row duplication in the Lakeflow Tables UI).
+      libraries:
+        - glob:
+            include: ../src/pipeline/**
+      configuration:
+        catalog: ${var.catalog}
+        schema: ${var.schema}
+        # Pipeline-configuration variables, referenced in SQL via ${key}.
+        max_history_days: "540"
+        # Rolling-window floor for silver_session_recent: a fixed date (not current_date())
+        # so the filter stays deterministic and incrementally refreshable; the orchestrator
+        # advances it once per run. ~30 days behind the current data max.
+        window_start_date: "2026-05-13"
