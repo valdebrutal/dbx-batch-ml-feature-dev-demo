@@ -25,6 +25,8 @@ variables:
   num_accounts:
     description: Number of synthetic player accounts to generate.
     default: 5000
+  partition_date:
+    description: Run date (upper bound) for silver_session_recent; the MV keeps the trailing 30 days ending here. Required - pass on every command, e.g. --var partition_date=2026-06-13.
 
 targets:
   dev:

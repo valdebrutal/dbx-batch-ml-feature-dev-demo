@@ -1,6 +1,7 @@
--- Rolling "last N days" window over silver_session. Uses a FIXED date parameter
--- (${window_start_date}), not current_date(), so the filter is deterministic and
--- incrementally refreshable; the orchestrator advances the parameter once per run.
+-- Windowed feature table: silver_session over the trailing 30 days ending at
+-- ${partition_date} (a required bundle variable = the run date / upper bound).
+-- Fixed-literal bounds (not current_date()) keep the filter incrementally refreshable;
+-- the window moves by providing a new partition_date at deploy.
 
 CREATE OR REFRESH MATERIALIZED VIEW silver_session_recent (
   account_id BIGINT NOT NULL,
@@ -22,4 +23,4 @@ SELECT
   sessions_ios_7d,
   sessions_android_7d
 FROM silver_session
-WHERE observation_date >= DATE '${window_start_date}';
+WHERE observation_date BETWEEN DATE '${partition_date}' - INTERVAL 30 DAY AND DATE '${partition_date}';

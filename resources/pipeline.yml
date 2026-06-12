@@ -19,7 +19,7 @@ resources:
         schema: ${var.schema}
         # Pipeline-configuration variables, referenced in SQL via ${key}.
         max_history_days: "540"
-        # Rolling-window floor for silver_session_recent: a fixed date (not current_date())
-        # so the filter stays deterministic and incrementally refreshable; the orchestrator
-        # advances it once per run. ~30 days behind the current data max.
-        window_start_date: "2026-05-13"
+        # Run date for silver_session_recent (upper bound; the MV keeps the trailing
+        # 30 days ending here). From the required partition_date bundle variable. A fixed
+        # literal, not current_date(), so the filter stays incrementally refreshable.
+        partition_date: ${var.partition_date}
