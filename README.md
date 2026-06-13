@@ -119,6 +119,17 @@ databricks bundle run sc_fs_demo_orchestrator        # the full DAG
 
 Override catalog/schema without editing files: `--var catalog=my_catalog --var schema=my_schema`.
 
+## Development
+
+Formatting, linting, and static type-checking run automatically on every commit via [pre-commit](https://pre-commit.com): **ruff** (format + lint) and **mypy**, configured in `pyproject.toml`. One-time setup per clone:
+
+```bash
+uv tool install pre-commit
+pre-commit install
+```
+
+Run the checks manually any time with `pre-commit run --all-files`.
+
 ## Outputs to inspect after a run
 
 - `<catalog>.<schema>.src_*` — 8 source tables
