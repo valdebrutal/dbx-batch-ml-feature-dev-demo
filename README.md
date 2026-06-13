@@ -66,7 +66,7 @@ The materialized views refresh **incrementally** on serverless: when new data ar
 2. Re-run `sc_fs_demo_pipeline`.
 3. In the pipeline UI, the **Tables** tab shows each MV's refresh type (`Incremental` / `No change` / `Full recompute`). MVs whose inputs didn't change are skipped; only the affected ones recompute.
 
-`scroll/silver_session_recent.sql` shows a rolling last-30-days window using `current_date()` in the filter, so it auto-advances daily with no parameter or redeploy — and it still refreshes incrementally (verified ROW_BASED, not a full recompute).
+Every feature MV is bounded to the run's partition window: `common/date_spine.sql` reads the `:day_after_partition_date` job parameter (the run date) and emits the 30 days ending at `partition_date` (= `day_after_partition_date − 1`, the last fully-closed day). Every MV is built on `date_spine`, so each run processes only `[partition_date − 30, partition_date]`. The job defaults `day_after_partition_date` to its trigger date; override it via "Run now with different parameters" to reprocess a past date.
 
 ## Source tables (`src_*`)
 
@@ -92,7 +92,7 @@ Six append-only event streams keyed on `account_id` + an event timestamp (with a
 | Forward range-window label | `pipeline/common/labels_did_login_within_7d.sql` |
 | JSON struct parsing | `pipeline/scroll/silver_session.sql` (`from_json`) |
 | Snapshot / dim joins | `pipeline/common/silver_account.sql`, `pipeline/scroll/silver_social_enriched.sql` |
-| Rolling last-30-days window via `current_date()` (incrementally refreshable) | `pipeline/scroll/silver_session_recent.sql` |
+| Per-run partition window (job param → `:day_after_partition_date`) | `pipeline/common/date_spine.sql` |
 | Feature subset selection (per-model) | `jobs/build_training_set.py`, `build_prediction_set.py` |
 | Data-quality expectations | most feature MVs (`CONSTRAINT ... EXPECT (...)`) |
 

@@ -5,7 +5,7 @@ resources:
       serverless: true
       catalog: ${var.catalog}
       schema: ${var.schema}
-      channel: CURRENT
+      channel: PREVIEW
       # development mode is set by the bundle target (mode: development), not hardcoded.
       # Source layout mirrors Hilbert's SQL taxonomy: common/ holds cross-pipeline
       # shared MVs (reusable across scroll / magic / soil); scroll/ holds this
@@ -17,5 +17,3 @@ resources:
       configuration:
         catalog: ${var.catalog}
         schema: ${var.schema}
-        # Pipeline-configuration variables, referenced in SQL via ${key}.
-        max_history_days: "540"
