@@ -25,5 +25,6 @@ repos:
         name: mypy (static types)
         entry: uvx mypy@1.14.1
         language: system
-        pass_filenames: false
+        pass_filenames: false        # mypy reads files=["src"] from pyproject
+        types_or: [python, pyi]      # but only run the hook when Python changed
         require_serial: true
