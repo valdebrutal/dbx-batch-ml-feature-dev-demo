@@ -1,7 +1,8 @@
 """Seed synthetic source data for the demo.
 
 Scroll-shaped mobile game: accounts + 6 event streams + a clan-membership snapshot
-(~5K accounts x 180 days). Every run drops and recreates all source tables, so it
+(~1M accounts x 90 days by default -> ~2M rows/date in the largest event table, ~500M
+rows total). Every run drops and recreates all source tables, so it
 doubles as the demo reset button (undoes append_one_day / restate_three_dates).
 Source tables enable row tracking and deletion vectors so downstream MVs can refresh
 incrementally on later runs.
@@ -46,8 +47,8 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--catalog", required=True)
     p.add_argument("--schema", required=True)
-    p.add_argument("--history-days", type=int, default=180)
-    p.add_argument("--num-accounts", type=int, default=5000)
+    p.add_argument("--history-days", type=int, default=90)
+    p.add_argument("--num-accounts", type=int, default=1000000)
     return p.parse_args()
 
 
