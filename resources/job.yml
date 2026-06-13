@@ -13,11 +13,6 @@ resources:
           default: ${var.history_days}
         - name: num_accounts
           default: ${var.num_accounts}
-        # The run's date = the day AFTER the closed partition date, resolved at trigger time
-        # (the job is scheduled at day+1 00:00). Auto-pushed to the input_data pipeline task;
-        # read in SQL as :day_after_partition_date. The closed day = this value minus 1.
-        - name: day_after_partition_date
-          default: "{{job.trigger.time.iso_date}}"
 
       tasks:
         - task_key: input_data

@@ -66,15 +66,11 @@ The materialized views refresh **incrementally** on serverless: when new data ar
 2. Re-run `sc_fs_demo_pipeline`.
 3. In the pipeline UI, the **Tables** tab shows each MV's refresh type (`Incremental` / `No change` / `Full recompute`). MVs whose inputs didn't change are skipped; only the affected ones recompute.
 
-## Per-run partition date (Lakeflow job → SDP pipeline parameter)
+## Rolling window (current_date())
 
-The orchestrator passes a per-run **`day_after_partition_date`** parameter into the SDP pipeline, which bounds the data every MV processes — the SDP analog of an Airflow execution / `data_interval` date.
+`common/date_spine.sql` emits the last 30 days ending today via `current_date()`, and every feature MV is built on `date_spine` — so each run processes only `[current_date() − 29, current_date()]`. No job parameter and no pipeline-parameters preview required; the window auto-advances with the calendar.
 
-- The job parameter (`resources/job.yml`) defaults to the run's trigger date, `{{job.trigger.time.iso_date}}`. Lakeflow pushes it down to the `input_data` pipeline task automatically.
-- `common/date_spine.sql` reads it as the named parameter **`:day_after_partition_date`**. The job is scheduled at day+1 00:00 (after the date closes), so the **partition date** being processed is `day_after_partition_date − 1`. `date_spine` emits the window `[partition_date − 30, partition_date]`, and **every feature MV is built on `date_spine`** — so the whole pipeline processes only that window each run.
-- **Reprocess or backfill any past date, no redeploy:** "Run now with different parameters" → set `day_after_partition_date`.
-
-Requires the **Spark Declarative Pipeline Parameters** preview (enable on the workspace Previews page) and pipeline `channel: PREVIEW` (the named-parameter handler is DBR 18.0+). One gotcha: a named parameter (`:...`) and a `${configuration}` reference cannot share a single statement — SDP runs named-parameter substitution before `${...}` substitution, so the window size here is a literal, not a config value.
+Trade-off: simple and zero-wiring, but not idempotent — a rerun uses today's date, so you can't reprocess/backfill a specific past date.
 
 ## Source tables (`src_*`)
 
@@ -95,7 +91,7 @@ Six append-only event streams keyed on `account_id` + an event timestamp (with a
 
 | Capability / pattern | Where |
 |---|---|
-| **Per-run partition date passed from the Lakeflow job into the SDP pipeline** (named parameter `:day_after_partition_date`) — windows every MV to `[partition_date − 30, partition_date]` | `resources/job.yml` (job param) → `pipeline/common/date_spine.sql` |
+| Rolling last-30-days window via `current_date()` — windows every feature MV | `pipeline/common/date_spine.sql` |
 | MVs as governed, point-in-time-joinable feature tables (`PRIMARY KEY ... TIMESERIES`) | every `pipeline/**/silver_*.sql` |
 | Incremental refresh / cheap backfill (Enzyme) | whole pipeline — see [Seeing incremental refresh](#seeing-incremental-refresh-enzyme) |
 | Multi-stage CTEs | `pipeline/scroll/silver_battle.sql` |
