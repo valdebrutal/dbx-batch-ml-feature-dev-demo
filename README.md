@@ -121,10 +121,11 @@ Override catalog/schema without editing files: `--var catalog=my_catalog --var s
 
 ## Development
 
-Formatting, linting, and static type-checking run automatically on every commit via [pre-commit](https://pre-commit.com): **ruff** (format + lint) and **mypy**, configured in `pyproject.toml`. One-time setup per clone:
+Formatting, linting, static type-checking, and secret scanning run automatically on every commit via [pre-commit](https://pre-commit.com): **ruff** (format + lint), **mypy** (config in `pyproject.toml`), and **gitleaks**. One-time setup per clone:
 
 ```bash
 uv tool install pre-commit
+brew install gitleaks          # secret scanner (or see gitleaks.io)
 pre-commit install
 ```
 

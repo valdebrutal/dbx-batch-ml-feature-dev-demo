@@ -28,3 +28,13 @@ repos:
         pass_filenames: false        # mypy reads files=["src"] from pyproject
         types_or: [python, pyi]      # but only run the hook when Python changed
         require_serial: true
+  # Secret scanning. Uses a `gitleaks` binary on PATH (install: `brew install gitleaks`)
+  # rather than the upstream golang hook, which builds from source via the Go module
+  # proxy. Scans the staged diff on every commit.
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: gitleaks (secret scan)
+        entry: gitleaks protect --staged --redact
+        language: system
+        pass_filenames: false
