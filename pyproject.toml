@@ -19,3 +19,38 @@ dependencies = [
 package-dir = { "" = "src" }
 packages = ["features"]
 py-modules = ["logging_config"]
+
+# Dev tooling (formatting, linting, static analysis, git hooks). Installed via
+# `uv sync` / `uv run`; orchestrated on commit by pre-commit (.pre-commit-config.yaml).
+[dependency-groups]
+dev = [
+  "ruff>=0.8.6",
+  "mypy>=1.14",
+  "pre-commit>=4.0",
+]
+
+# Formatter + linter (replaces black / isort / flake8).
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+src = ["src"]
+
+[tool.ruff.lint]
+# pycodestyle/pyflakes + import sorting (I), pyupgrade (UP), bugbear (B),
+# flake8-simplify (SIM), flake8-comprehensions (C4).
+select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
+# Line length is enforced by the formatter (line-length = 88); E501 in the linter only
+# flags the few SQL-in-f-string / PySpark expression lines the formatter can't break.
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# SDP pipeline Python files reference runtime-injected globals (e.g. `spark`) with no import.
+"src/pipeline/**/*.py" = ["F821"]
+
+# Static type checker.
+[tool.mypy]
+python_version = "3.11"
+files = ["src"]
+ignore_missing_imports = true   # pyspark / databricks-* ship limited stubs
+warn_redundant_casts = true
+warn_unused_ignores = true

@@ -12,14 +12,12 @@ from __future__ import annotations
 import argparse
 import logging
 
-from pyspark.sql import SparkSession
-
 from databricks.feature_engineering import FeatureEngineeringClient
+from pyspark.sql import SparkSession
 
 from features import SCROLL_CHURN_FEATURES
 from features.feature_catalog import get_features
 from logging_config import configure_logging
-
 
 logger = logging.getLogger(__name__)
 

@@ -9,13 +9,12 @@ point-in-time-joinable feature table, so no create_feature step is needed.
 
 from __future__ import annotations
 
-from pyspark.sql import SparkSession
-
 from databricks.feature_engineering.entities import (
     ColumnSelection,
     DeltaTableSource,
     Feature,
 )
+from pyspark.sql import SparkSession
 
 ENTITY: list[str] = ["account_id"]
 TIMESERIES_COLUMN: str = "observation_date"

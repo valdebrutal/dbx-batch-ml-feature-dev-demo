@@ -12,11 +12,11 @@ import argparse
 import datetime as dt
 import logging
 
-from pyspark.sql import SparkSession, functions as F
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
 from pyspark.sql.window import Window
 
 from logging_config import configure_logging
-
 
 logger = logging.getLogger(__name__)
 
@@ -62,13 +62,16 @@ def main() -> None:
         f"WHERE CAST(login_ts AS DATE) = DATE '{new_day}'"
     ).first()["n"]
     if already > 0:
-        logger.info("Day %s already has %d login rows; nothing to append.", new_day, already)
+        logger.info(
+            "Day %s already has %d login rows; nothing to append.", new_day, already
+        )
         return
 
     new_day_lit = F.lit(new_day).cast("date")
-    new_day_ts_base = F.lit(new_day).cast("timestamp")
 
-    accounts = spark.table(f"{cs}.src_dim_account").where(F.col("created_at") <= new_day_lit)
+    accounts = spark.table(f"{cs}.src_dim_account").where(
+        F.col("created_at") <= new_day_lit
+    )
 
     def ts_within_new_day() -> F.Column:
         return F.expr(
@@ -83,9 +86,7 @@ def main() -> None:
                 F.lit(0),
                 (rate_col + (F.rand() - F.lit(0.5)) * rate_col).cast("int"),
             ),
-        ).otherwise(
-            F.when(F.rand() < rate_col, F.lit(1)).otherwise(F.lit(0))
-        )
+        ).otherwise(F.when(F.rand() < rate_col, F.lit(1)).otherwise(F.lit(0)))
         return (
             df.withColumn("event_count", evt_count)
             .where(F.col("event_count") > 0)
@@ -114,19 +115,25 @@ def main() -> None:
 
     # ----- purchases — uses spender_class for class-specific rate + amount
     base_rate = (
-        F.when(F.col("spender_class") == "whale",       F.lit(0.4))
-         .when(F.col("spender_class") == "dolphin",     F.lit(0.15))
-         .when(F.col("spender_class") == "minnow",      F.lit(0.05))
-         .otherwise(F.lit(0.001))
+        F.when(F.col("spender_class") == "whale", F.lit(0.4))
+        .when(F.col("spender_class") == "dolphin", F.lit(0.15))
+        .when(F.col("spender_class") == "minnow", F.lit(0.05))
+        .otherwise(F.lit(0.001))
     )
     amount_expr = (
-        F.when(F.col("spender_class") == "whale",
-               F.round(F.lit(5.0) + F.rand() * F.lit(45.0), 2))
-         .when(F.col("spender_class") == "dolphin",
-               F.round(F.lit(2.0) + F.rand() * F.lit(13.0), 2))
-         .when(F.col("spender_class") == "minnow",
-               F.round(F.lit(0.5) + F.rand() * F.lit(3.0), 2))
-         .otherwise(F.round(F.lit(0.5) + F.rand() * F.lit(1.0), 2))
+        F.when(
+            F.col("spender_class") == "whale",
+            F.round(F.lit(5.0) + F.rand() * F.lit(45.0), 2),
+        )
+        .when(
+            F.col("spender_class") == "dolphin",
+            F.round(F.lit(2.0) + F.rand() * F.lit(13.0), 2),
+        )
+        .when(
+            F.col("spender_class") == "minnow",
+            F.round(F.lit(0.5) + F.rand() * F.lit(3.0), 2),
+        )
+        .otherwise(F.round(F.lit(0.5) + F.rand() * F.lit(1.0), 2))
     )
     purchases = (
         explode_by_rate(accounts, base_rate)
@@ -195,7 +202,9 @@ def main() -> None:
         spark.table(f"{cs}.src_clan_membership_daily")
         .withColumn(
             "rn",
-            F.row_number().over(Window.partitionBy("account_id").orderBy(F.col("date").desc())),
+            F.row_number().over(
+                Window.partitionBy("account_id").orderBy(F.col("date").desc())
+            ),
         )
         .where(F.col("rn") == 1)
         .select("account_id", "is_clan_member")

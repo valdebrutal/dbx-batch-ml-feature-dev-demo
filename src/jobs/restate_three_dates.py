@@ -13,10 +13,10 @@ import argparse
 import datetime as dt
 import logging
 
-from pyspark.sql import SparkSession, functions as F
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
 
 from logging_config import configure_logging
-
 
 logger = logging.getLogger(__name__)
 
@@ -64,12 +64,12 @@ def main() -> None:
     # (restating a full daily snapshot would force a full recompute, and real
     # restatements usually correct events, not dim snapshots).
     for tbl, ts_col in [
-        ("src_events_login",       "login_ts"),
-        ("src_events_battle",      "battle_ts"),
-        ("src_events_purchase",    "purchase_ts"),
+        ("src_events_login", "login_ts"),
+        ("src_events_battle", "battle_ts"),
+        ("src_events_purchase", "purchase_ts"),
         ("src_events_progression", "level_up_ts"),
-        ("src_events_social",      "event_ts"),
-        ("src_events_session",     "session_ts"),
+        ("src_events_social", "event_ts"),
+        ("src_events_session", "session_ts"),
     ]:
         n = spark.sql(
             f"SELECT COUNT(*) AS n FROM {cs}.{tbl} "
@@ -104,9 +104,7 @@ def main() -> None:
                 F.lit(0),
                 (rate_col + (F.rand() - F.lit(0.5)) * rate_col).cast("int"),
             ),
-        ).otherwise(
-            F.when(F.rand() < rate_col, F.lit(1)).otherwise(F.lit(0))
-        )
+        ).otherwise(F.when(F.rand() < rate_col, F.lit(1)).otherwise(F.lit(0)))
         return (
             df.withColumn("event_count", evt_count)
             .where(F.col("event_count") > 0)
@@ -132,19 +130,25 @@ def main() -> None:
     battles.write.mode("append").saveAsTable(f"{cs}.src_events_battle")
 
     base_rate = (
-        F.when(F.col("spender_class") == "whale",   F.lit(0.4))
-         .when(F.col("spender_class") == "dolphin", F.lit(0.15))
-         .when(F.col("spender_class") == "minnow",  F.lit(0.05))
-         .otherwise(F.lit(0.001))
+        F.when(F.col("spender_class") == "whale", F.lit(0.4))
+        .when(F.col("spender_class") == "dolphin", F.lit(0.15))
+        .when(F.col("spender_class") == "minnow", F.lit(0.05))
+        .otherwise(F.lit(0.001))
     )
     amount_expr = (
-        F.when(F.col("spender_class") == "whale",
-               F.round(F.lit(5.0) + F.rand() * F.lit(45.0), 2))
-         .when(F.col("spender_class") == "dolphin",
-               F.round(F.lit(2.0) + F.rand() * F.lit(13.0), 2))
-         .when(F.col("spender_class") == "minnow",
-               F.round(F.lit(0.5) + F.rand() * F.lit(3.0), 2))
-         .otherwise(F.round(F.lit(0.5) + F.rand() * F.lit(1.0), 2))
+        F.when(
+            F.col("spender_class") == "whale",
+            F.round(F.lit(5.0) + F.rand() * F.lit(45.0), 2),
+        )
+        .when(
+            F.col("spender_class") == "dolphin",
+            F.round(F.lit(2.0) + F.rand() * F.lit(13.0), 2),
+        )
+        .when(
+            F.col("spender_class") == "minnow",
+            F.round(F.lit(0.5) + F.rand() * F.lit(3.0), 2),
+        )
+        .otherwise(F.round(F.lit(0.5) + F.rand() * F.lit(1.0), 2))
     )
     purchases = (
         explode_by_rate(account_dates, base_rate)
@@ -192,12 +196,12 @@ def main() -> None:
 
     # ----- summary -------------------------------------------------------
     for tbl, ts_col in [
-        ("src_events_login",       "login_ts"),
-        ("src_events_battle",      "battle_ts"),
-        ("src_events_purchase",    "purchase_ts"),
+        ("src_events_login", "login_ts"),
+        ("src_events_battle", "battle_ts"),
+        ("src_events_purchase", "purchase_ts"),
         ("src_events_progression", "level_up_ts"),
-        ("src_events_social",      "event_ts"),
-        ("src_events_session",     "session_ts"),
+        ("src_events_social", "event_ts"),
+        ("src_events_session", "session_ts"),
     ]:
         n = spark.sql(
             f"SELECT COUNT(*) AS n FROM {cs}.{tbl} "

@@ -43,7 +43,8 @@ def _spend(category: str, window: int) -> F.Column:
     return F.coalesce(
         F.sum(
             F.when(
-                (F.col("category") == category) & F.col("days_back").between(0, window - 1),
+                (F.col("category") == category)
+                & F.col("days_back").between(0, window - 1),
                 F.col("amount_usd"),
             )
         ),
@@ -64,35 +65,43 @@ def silver_purchase():
     # obs spine: one row per (account, observation_date) from account creation onward.
     obs = (
         spark.read.table("src_dim_account")
-        .join(spark.read.table("date_spine"), F.col("observation_date") >= F.col("created_at"))
+        .join(
+            spark.read.table("date_spine"),
+            F.col("observation_date") >= F.col("created_at"),
+        )
         .select("account_id", "observation_date")
         .alias("o")
     )
     # Attach each purchase that falls in the widest trailing window, with days_back.
-    windowed = (
-        obs.join(
-            spark.read.table("src_events_purchase").alias("p"),
-            (F.col("p.account_id") == F.col("o.account_id"))
-            & (F.col("p.event_date") >= F.date_sub(F.col("o.observation_date"), MAX_WINDOW))
-            & (F.col("p.event_date") <= F.col("o.observation_date")),
-            "left",
-        )
-        .select(
-            F.col("o.account_id").alias("account_id"),
-            F.col("o.observation_date").alias("observation_date"),
-            F.col("p.category").alias("category"),
-            F.col("p.amount_usd").alias("amount_usd"),
-            F.datediff(F.col("o.observation_date"), F.col("p.purchase_ts").cast("date")).alias("days_back"),
-        )
+    windowed = obs.join(
+        spark.read.table("src_events_purchase").alias("p"),
+        (F.col("p.account_id") == F.col("o.account_id"))
+        & (F.col("p.event_date") >= F.date_sub(F.col("o.observation_date"), MAX_WINDOW))
+        & (F.col("p.event_date") <= F.col("o.observation_date")),
+        "left",
+    ).select(
+        F.col("o.account_id").alias("account_id"),
+        F.col("o.observation_date").alias("observation_date"),
+        F.col("p.category").alias("category"),
+        F.col("p.amount_usd").alias("amount_usd"),
+        F.datediff(
+            F.col("o.observation_date"), F.col("p.purchase_ts").cast("date")
+        ).alias("days_back"),
     )
 
     # The macro replacement: a comprehension builds the 30 pivot aggregations.
     pivot_aggs = [_spend(c, w) for c in CATEGORIES for w in WINDOWS_DAYS]
     keepers = [
-        F.count(F.when(F.col("days_back").between(0, 6), F.lit(1))).alias("purchases_count_7d"),
-        F.coalesce(F.sum(F.when(F.col("days_back").between(0, 29), F.col("amount_usd"))), F.lit(0.0))
-            .alias("purchases_amount_sum_30d"),
-        F.coalesce(F.sum(F.when(F.col("days_back").between(0, 89), F.col("amount_usd"))), F.lit(0.0))
-            .alias("purchases_amount_sum_90d"),
+        F.count(F.when(F.col("days_back").between(0, 6), F.lit(1))).alias(
+            "purchases_count_7d"
+        ),
+        F.coalesce(
+            F.sum(F.when(F.col("days_back").between(0, 29), F.col("amount_usd"))),
+            F.lit(0.0),
+        ).alias("purchases_amount_sum_30d"),
+        F.coalesce(
+            F.sum(F.when(F.col("days_back").between(0, 89), F.col("amount_usd"))),
+            F.lit(0.0),
+        ).alias("purchases_amount_sum_90d"),
     ]
     return windowed.groupBy("account_id", "observation_date").agg(*pivot_aggs, *keepers)
