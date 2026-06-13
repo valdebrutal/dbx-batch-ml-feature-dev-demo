@@ -20,7 +20,7 @@ variables:
     description: Schema under the catalog where all demo objects live.
     default: sc_fs_demo
   history_days:
-    description: Days of synthetic history to seed (the pipeline only processes the last 30).
+    description: Days of synthetic history to seed.
     default: 90
   num_accounts:
     description: Number of synthetic player accounts to generate (drives per-date volume; ~1M gives a couple million rows/date).

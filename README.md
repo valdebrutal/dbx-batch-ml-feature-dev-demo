@@ -66,11 +66,13 @@ The materialized views refresh **incrementally** on serverless: when new data ar
 2. Re-run `sc_fs_demo_pipeline`.
 3. In the pipeline UI, the **Tables** tab shows each MV's refresh type (`Incremental` / `No change` / `Full recompute`). MVs whose inputs didn't change are skipped; only the affected ones recompute.
 
-## Rolling window (current_date())
+## The observation-date spine and incremental refresh
 
-`common/date_spine.sql` emits the last 30 days ending today via `current_date()`, and every feature MV is built on `date_spine` — so each run processes only `[current_date() − 29, current_date()]`. No job parameter and no pipeline-parameters preview required; the window auto-advances with the calendar.
+`common/date_spine.sql` is the date axis every feature MV joins. It's a plain `SELECT DISTINCT event_date` over the event data — deliberately **not** a `current_date()` generator or a moving `max(event_date) − N` window. Either of those forces `date_spine` to overwrite all its rows on every run; since every MV joins it, that full changeset cascades a full recompute across the whole pipeline (catastrophic once tables are large).
 
-Trade-off: simple and zero-wiring, but not idempotent — a rerun uses today's date, so you can't reprocess/backfill a specific past date.
+A `DISTINCT` over an append-only source is incrementally maintainable: a new day adds exactly one date, so `date_spine` refreshes ROW_BASED and the feature MVs refresh APPEND_ONLY / ROW_BASED on just that day's slice; a no-data rerun is a full NO_OP. Verified at 1M accounts — a daily append touches ~1M rows/MV, not the ~25M+ full grid.
+
+By design there's no rolling processing window: the feature tables keep full history (better for point-in-time joins). A bounded serving window lives in the eligibility/training-set selection (`common/eligibility_prediction.sql`), where it doesn't affect incremental refresh.
 
 ## Source tables (`src_*`)
 
@@ -91,7 +93,7 @@ Six append-only event streams keyed on `account_id` + an event timestamp (with a
 
 | Capability / pattern | Where |
 |---|---|
-| Rolling last-30-days window via `current_date()` — windows every feature MV | `pipeline/common/date_spine.sql` |
+| Incrementally-maintainable observation-date spine (data-derived `DISTINCT`, no `current_date()` / moving window) | `pipeline/common/date_spine.sql` |
 | MVs as governed, point-in-time-joinable feature tables (`PRIMARY KEY ... TIMESERIES`) | every `pipeline/**/silver_*.sql` |
 | Incremental refresh / cheap backfill (Enzyme) | whole pipeline — see [Seeing incremental refresh](#seeing-incremental-refresh-enzyme) |
 | Multi-stage CTEs | `pipeline/scroll/silver_battle.sql` |
