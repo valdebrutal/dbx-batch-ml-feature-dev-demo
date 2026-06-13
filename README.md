@@ -66,11 +66,19 @@ The materialized views refresh **incrementally** on serverless: when new data ar
 2. Re-run `sc_fs_demo_pipeline`.
 3. In the pipeline UI, the **Tables** tab shows each MV's refresh type (`Incremental` / `No change` / `Full recompute`). MVs whose inputs didn't change are skipped; only the affected ones recompute.
 
-Every feature MV is bounded to the run's partition window: `common/date_spine.sql` reads the `:day_after_partition_date` job parameter (the run date) and emits the 30 days ending at `partition_date` (= `day_after_partition_date − 1`, the last fully-closed day). Every MV is built on `date_spine`, so each run processes only `[partition_date − 30, partition_date]`. The job defaults `day_after_partition_date` to its trigger date; override it via "Run now with different parameters" to reprocess a past date.
+## Per-run partition date (Lakeflow job → SDP pipeline parameter)
+
+The orchestrator passes a per-run **`day_after_partition_date`** parameter into the SDP pipeline, which bounds the data every MV processes — the SDP analog of an Airflow execution / `data_interval` date.
+
+- The job parameter (`resources/job.yml`) defaults to the run's trigger date, `{{job.trigger.time.iso_date}}`. Lakeflow pushes it down to the `input_data` pipeline task automatically.
+- `common/date_spine.sql` reads it as the named parameter **`:day_after_partition_date`**. The job is scheduled at day+1 00:00 (after the date closes), so the **partition date** being processed is `day_after_partition_date − 1`. `date_spine` emits the window `[partition_date − 30, partition_date]`, and **every feature MV is built on `date_spine`** — so the whole pipeline processes only that window each run.
+- **Reprocess or backfill any past date, no redeploy:** "Run now with different parameters" → set `day_after_partition_date`.
+
+Requires the **Spark Declarative Pipeline Parameters** preview (enable on the workspace Previews page) and pipeline `channel: PREVIEW` (the named-parameter handler is DBR 18.0+). One gotcha: a named parameter (`:...`) and a `${configuration}` reference cannot share a single statement — SDP runs named-parameter substitution before `${...}` substitution, so the window size here is a literal, not a config value.
 
 ## Source tables (`src_*`)
 
-Six append-only event streams keyed on `account_id` + an event timestamp (with a date-grain `event_date` cluster key), one account dimension, and one daily snapshot.
+Six append-only event streams keyed on `account_id` + an event timestamp (with a date-grain `event_date` cluster key), one account dimension, and one daily snapshot. Seeded at **~1M accounts × 90 days** by default (~316M rows; ~a couple million event records per recent date) — tune via the `num_accounts` / `history_days` bundle variables.
 
 | Table | Grain | Content |
 |---|---|---|
@@ -83,18 +91,20 @@ Six append-only event streams keyed on `account_id` + an event timestamp (with a
 | `src_events_session` | one row per session | Play sessions (~1.1/account/day) with a raw `payload_json` (`{duration_s, device, level_reached}`) parsed via `from_json`. |
 | `src_clan_membership_daily` | one row per (`account_id`, `date`) | Daily slowly-changing snapshot of clan membership: `is_clan_member` boolean. |
 
-## SQL patterns, and where to find each
+## Capabilities & patterns demonstrated
 
-| Pattern | File |
+| Capability / pattern | Where |
 |---|---|
+| **Per-run partition date passed from the Lakeflow job into the SDP pipeline** (named parameter `:day_after_partition_date`) — windows every MV to `[partition_date − 30, partition_date]` | `resources/job.yml` (job param) → `pipeline/common/date_spine.sql` |
+| MVs as governed, point-in-time-joinable feature tables (`PRIMARY KEY ... TIMESERIES`) | every `pipeline/**/silver_*.sql` |
+| Incremental refresh / cheap backfill (Enzyme) | whole pipeline — see [Seeing incremental refresh](#seeing-incremental-refresh-enzyme) |
 | Multi-stage CTEs | `pipeline/scroll/silver_battle.sql` |
 | Conditional-aggregation pivot (code-generated, DataFrame API) | `pipeline/scroll/silver_purchase.py` |
 | Forward range-window label | `pipeline/common/labels_did_login_within_7d.sql` |
 | JSON struct parsing | `pipeline/scroll/silver_session.sql` (`from_json`) |
 | Snapshot / dim joins | `pipeline/common/silver_account.sql`, `pipeline/scroll/silver_social_enriched.sql` |
-| Per-run partition window (job param → `:day_after_partition_date`) | `pipeline/common/date_spine.sql` |
-| Feature subset selection (per-model) | `jobs/build_training_set.py`, `build_prediction_set.py` |
-| Data-quality expectations | most feature MVs (`CONSTRAINT ... EXPECT (...)`) |
+| Per-model feature subset selection (`create_training_set`) | `jobs/build_training_set.py`, `build_prediction_set.py` |
+| Data-quality expectations (`CONSTRAINT ... EXPECT`) | most feature MVs |
 
 ## Deploy + run
 
