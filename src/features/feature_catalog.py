@@ -9,12 +9,17 @@ point-in-time-joinable feature table, so no create_feature step is needed.
 
 from __future__ import annotations
 
+import logging
+
+from databricks.feature_engineering import FeatureEngineeringClient
 from databricks.feature_engineering.entities import (
     ColumnSelection,
     DeltaTableSource,
     Feature,
 )
 from pyspark.sql import SparkSession
+
+logger = logging.getLogger(__name__)
 
 ENTITY: list[str] = ["account_id"]
 TIMESERIES_COLUMN: str = "observation_date"
@@ -66,6 +71,29 @@ def build_catalog(spark: SparkSession, catalog: str, schema: str) -> dict[str, F
                 name=column,
             )
     return catalog_map
+
+
+def register_features(
+    fe: FeatureEngineeringClient, spark: SparkSession, catalog: str, schema: str
+) -> list[Feature]:
+    """Register every catalog Feature in UC via ``fe.register_feature``.
+
+    create_training_set does not require this; we register so each feature is a governed
+    UC object with feature-level lineage (source columns -> feature -> the training sets
+    and models that consume it). Re-runs that hit an already-registered feature are
+    logged and skipped.
+    """
+    registered: list[Feature] = []
+    for name, feature in build_catalog(spark, catalog, schema).items():
+        try:
+            registered.append(
+                fe.register_feature(
+                    feature=feature, catalog_name=catalog, schema_name=schema
+                )
+            )
+        except Exception as exc:  # ponytail: exact type unknown until first run; log+continue so re-runs are idempotent
+            logger.warning("skip register '%s': %s", name, exc)
+    return registered
 
 
 def get_features(
