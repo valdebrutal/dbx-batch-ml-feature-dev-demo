@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+from importlib.metadata import version
 
 from databricks.feature_engineering import FeatureEngineeringClient
 from pyspark.sql import SparkSession
@@ -30,6 +31,9 @@ def main() -> None:
     configure_logging()
     args = parse_args()
     spark = SparkSession.builder.getOrCreate()
+    logger.info(
+        "databricks-feature-engineering %s", version("databricks-feature-engineering")
+    )
     fe = FeatureEngineeringClient()
     registered = register_features(fe, spark, args.catalog, args.schema)
     logger.info("registered %d features", len(registered))
